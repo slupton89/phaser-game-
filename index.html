@@ -1,6 +1,6 @@
-<!doctype html> 
-<html lang="en"> 
-<head> 
+<!doctype html>
+<html lang="en">
+<head>
     <meta charset="UTF-8" />
     <title>Making your first Phaser 3 Game - Part 3</title>
     <script src="\node_modules\phaser\dist\phaser.js"></script>
@@ -14,17 +14,15 @@
 
 <script type="text/javascript">
 
+    var player;
+    var cursors;
+    var shootKeys;
+    var camera;
+
     var config = {
         type: Phaser.AUTO,
         width: 800,
         height: 600,
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 300 },
-                debug: false
-            }
-        },
         scene: {
             preload: preload,
             create: create,
@@ -34,55 +32,135 @@
 
     var game = new Phaser.Game(config);
 
+
     function preload ()
     {
         this.load.image('sky', 'assets/sky.png');
         this.load.image('ground', 'assets/platform.png');
-        this.load.image('star', 'assets/star.png');
-        this.load.image('bomb', 'assets/bomb.png');
         this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
+        this.load.spritesheet('link', 'assets/16x16Sprites1.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('link-attack', 'assets/16x23Sprites3.png', { frameWidth: 16, frameHeight: 23 });
+        this.load.spritesheet('link-attack-side', 'assets/23x23Sprites2.png', { frameWidth: 23, frameHeight: 16})
     }
 
     function create ()
     {
         this.add.image(400, 300, 'sky');
-        
-        platforms = this.physics.add.staticGroup();
 
-        platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+        platforms = this.add.group();
 
+        camera = this.cameras.main;
         platforms.create(600, 400, 'ground');
-        platforms.create(50, 250, 'ground') 
+        platforms.create(50, 250, 'ground')
         platforms.create(750, 220, 'ground');
 
-        player = this.physics.add.sprite(100, 450, 'dude');
+        player = this.add.sprite(400, 300, 'link', 53);
+        player.setScale(2);
 
-        player.setBounce(0.2);
-        player.setCollideWorldBounds(true);
-
-        this.anims.create({
-            key: 'left',
-            frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'turn',
-            frames: [ { key: 'dude', frame: 4, } ],
-            frameRate: 20
-        });
+        cursors = this.input.keyboard.createCursorKeys();
 
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-            frameRate: 20,
-            repeat: -1
+            frames: this.anims.generateFrameNumbers('link', { start: 51, end: 52 }),
+            frameRate: 5,
         });
+
+        this.anims.create({
+            key: 'facedown',
+            frames: [ { key: 'link', frame: 53, } ],
+        });
+
+        this.anims.create({
+            key: 'down',
+            frames: this.anims.generateFrameNumbers('link', { start: 54, end: 55}),
+            frameRate: 5,
+        })
+
+        this.anims.create({
+            key: 'faceup',
+            frames: [ { key: 'link', frame: 56, } ],
+        });
+
+        this.anims.create({
+            key: 'faceside',
+            frames: [ { key: 'link', frame: 51, } ],
+        });
+
+        this.anims.create({
+            key: 'up',
+            frames: this.anims.generateFrameNumbers('link', { start: 57, end: 58 }),
+            frameRate: 5,
+        });
+
+        this.anims.create({
+            key: 'swing-sword-down',
+            // frames: this.anims.generateFrameNumbers('link-attack', { start: 0, end: 2}),
+            frames: [{ key: 'link-attack', frame: 2 }, { key: 'link-attack', frame: 1 }, { key: 'link-attack', frame: 0 }],
+            frameRate: 20,
+        });
+
+        this.anims.create({
+            key: 'swing-sword',
+            // frames: this.anims.generateFrameNumbers('link-attack', { start: 0, end: 2}),
+            frames: this.anims.generateFrameNumbers('link-attack', { start: 3, end: 5 }),
+            frameRate: 20,
+        });
+
+        this.anims.create({
+            key: 'swing-sword-side',
+            // frames: this.anims.generateFrameNumbers('link-attack', { start: 0, end: 2}),
+            frames: this.anims.generateFrameNumbers('link-attack-side', { start: 0, end: 3 }),
+            frameRate: 20,
+        });
+
+
+
+        scoreText = this.add.text(16, 16, 'score: ', { fontSize: '32px', fill: '#000' });
     }
 
     function update ()
     {
+        if(cursors.left.isDown) {
+            player.x -= 3;
+            camera.scrollX -= 3;
+            player.flipX = true
+            player.anims.play('right', true);
+            player.dir = 'left';
+        } else if(cursors.right.isDown) {
+            player.x += 3;
+            camera.scrollX += 3;
+            player.flipX = false;
+            player.anims.play('right', true);
+            player.dir = 'right';
+        } else if(cursors.down.isDown) {
+            player.y += 3;
+            camera.scrollY += 3;
+            player.anims.play('down', true);
+            player.dir = 'down';
+        } else if(cursors.up.isDown) {
+            player.y -= 3;
+            camera.scrollY -= 3;
+            player.anims.play('up', true);
+            player.dir = 'up';
+        }
+
+        this.input.keyboard.on('keydown_' + 'SPACE', () => {
+            player.attacking = true;
+            if(player.dir === 'up') {
+                player.anims.play('swing-sword');
+                setTimeout(() => player.anims.play('faceup'), 250);
+            } else if(player.dir === 'down') {
+                player.anims.play('swing-sword-down');
+                setTimeout(() => player.anims.play('facedown', false), 250);
+            } else if(player.dir === 'right') {
+                player.anims.play('swing-sword-side', true);
+                setTimeout(() => player.anims.play('faceside'), 250);
+            } else if(player.dir === 'left') {
+                player.anims.play('swing-sword-side')
+                setTimeout(() => player.anims.play('faceside'), 250);
+            }
+            player.attacking = false;
+        })
     }
 
 </script>
