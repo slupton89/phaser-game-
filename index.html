@@ -18,6 +18,7 @@
     var cursors;
     var shootKeys;
     var camera;
+    var npc = [];
 
     var config = {
         type: Phaser.AUTO,
@@ -27,11 +28,16 @@
             preload: preload,
             create: create,
             update: update
+        },
+        physics: {
+            default: 'arcade',
+            arcade: {
+                debug: false
+            }
         }
     };
 
     var game = new Phaser.Game(config);
-
 
     function preload ()
     {
@@ -47,15 +53,22 @@
     {
         this.add.image(400, 300, 'sky');
 
-        platforms = this.add.group();
+        platforms = this.physics.add.staticGroup();
 
         camera = this.cameras.main;
         platforms.create(600, 400, 'ground');
         platforms.create(50, 250, 'ground')
         platforms.create(750, 220, 'ground');
 
-        player = this.add.sprite(400, 300, 'link', 53);
+        player = this.physics.add.sprite(400, 300, 'link', 53);
         player.setScale(2);
+
+        // add detector for interactions
+        console.log('player: ', player);
+
+        npc.push(this.physics.add.sprite(300, 150, 'link', 3));
+        npc.push(this.physics.add.sprite(350, 150, 'link', 3));
+        npc.forEach(npc => npc.setScale(2));
 
         cursors = this.input.keyboard.createCursorKeys();
 
@@ -112,8 +125,6 @@
             frames: this.anims.generateFrameNumbers('link-attack-side', { start: 0, end: 3 }),
             frameRate: 20,
         });
-
-
 
         scoreText = this.add.text(16, 16, 'score: ', { fontSize: '32px', fill: '#000' });
     }
